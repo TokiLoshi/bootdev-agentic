@@ -3,6 +3,7 @@ import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+import settings
  
 # use client.models.generate content () method to get a response from gemin-2.0-flash-001 model
 # parameters: model name (gemini-2.0-flash-001), contents (string)
@@ -37,16 +38,31 @@ def main():
   messages = [
     types.Content(role="user", parts=[types.Part(text=user_prompt)]),
   ]
+  model_name = "gemini-2.0-flash-001"
+  model_config=types.GenerateContentConfig(
+    tools=[settings.available_functions], system_instruction=settings.system_prompt
+)
+  
   response = client.models.generate_content(
-    model="gemini-2.0-flash-001", contents=messages,
+    model=model_name, contents=messages,
+    config=model_config
   )
 
+  functions_called = response.function_calls
+  print(f"Functions called: {functions_called}")
+  if functions_called:
+    for function_details in functions_called:
+      function_name = function_details.name
+      function_args = function_details.args
+      print(f"Calling function: {function_name}({function_args})")
+    return 
+  
   if "--verbose" in args:
     print(f"Working on: {user_prompt}")
     print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
     print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
-  print(f"Response from Gemini: {response.text}")
+  print(f"{response.text}")
 
  
   return
