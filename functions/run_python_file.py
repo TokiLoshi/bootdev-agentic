@@ -1,7 +1,7 @@
 import os 
 import subprocess
 
-def run_python_file(working_directory, file_path):
+def run_python_file(working_directory, file_path, args=None):
   # If the file path is outside of the working directory 
   abs_working_dir = os.path.abspath(working_directory)
   abs_file_path = os.path.abspath(os.path.join(working_directory, file_path))
@@ -24,7 +24,7 @@ def run_python_file(working_directory, file_path):
   # Use subprocess.run 
     # Set a 30 second time out to prevent infinite execution
   try:
-    result = subprocess.run(["python", target_file], capture_output=True, timeout=30, text=True)
+    result = subprocess.run(["python", target_file] + (args or []), capture_output=True, timeout=30, text=True)
     print(f"Ran: {result}")
     
     # Capture both stdout and stderr 

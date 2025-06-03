@@ -3,13 +3,8 @@ import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-import settings
- 
-# use client.models.generate content () method to get a response from gemin-2.0-flash-001 model
-# parameters: model name (gemini-2.0-flash-001), contents (string)
-# content prompt: "Why is Boot.dev such a great place to learn backend development? Use one paragraph maximum."
-# generate_content metho returns GenerateContentReponse object 
-# print the .text propery of the response to get the model's answer 
+import settings 
+from functions.call_function import call_function
 
 def main():
   print("=========== Agentic boot ==============\n")
@@ -54,7 +49,18 @@ def main():
     for function_details in functions_called:
       function_name = function_details.name
       function_args = function_details.args
+      verbose_mode = "--verbose" in args 
       print(f"Calling function: {function_name}({function_args})")
+      try:
+        result = call_function(function_details, verbose_mode)
+        if result is None:
+          raise Exception(f"Result is empty")
+        if not result.parts:
+          raise Exception("Parts are missing")
+        if verbose_mode:
+          print(f"->{result.parts[0].function_response.response}")
+      except Exception as e:
+        raise Exception(f"Error in function call: {e}")
     return 
   
   if "--verbose" in args:
