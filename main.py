@@ -38,37 +38,62 @@ def main():
     tools=[settings.available_functions], system_instruction=settings.system_prompt
 )
   
-  response = client.models.generate_content(
-    model=model_name, contents=messages,
-    config=model_config
-  )
+  # Create a loop that iterates 20 times 
+  MAX_ITERATIONS=5 
 
-  functions_called = response.function_calls
-  print(f"Functions called: {functions_called}")
-  if functions_called:
-    for function_details in functions_called:
-      function_name = function_details.name
-      function_args = function_details.args
-      verbose_mode = "--verbose" in args 
-      print(f"Calling function: {function_name}({function_args})")
-      try:
-        result = call_function(function_details, verbose_mode)
-        if result is None:
-          raise Exception(f"Result is empty")
-        if not result.parts:
-          raise Exception("Parts are missing")
-        if verbose_mode:
-          print(f"->{result.parts[0].function_response.response}")
-      except Exception as e:
-        raise Exception(f"Error in function call: {e}")
-    return 
+  for i in range(MAX_ITERATIONS):
+
+    response = client.models.generate_content(
+      model=model_name, contents=messages,
+      config=model_config
+    )
+ 
+    # In each iteration check the candidates property of the response 
+    candidates_response = response.candidates
+    print(f"Candidates: {candidates_response}")
+    
+    # Iterate over each variations and add it's .content to the messages list 
+    for candidate in candidates_response: 
+      messages.append(candidate.content)
   
-  if "--verbose" in args:
-    print(f"Working on: {user_prompt}")
-    print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-    print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+    functions_called = response.function_calls
+    print(f"Functions called: {functions_called}")
+  
+    if functions_called:
+      for function_details in functions_called:
 
-  print(f"{response.text}")
+        function_name = function_details.name
+        function_args = function_details.args
+        verbose_mode = "--verbose" in args 
+        print(f"Calling function: {function_name}({function_args})")
+        
+        try:
+          result = call_function(function_details, verbose_mode)
+          
+          if result is None:
+            raise Exception(f"Result is empty")
+          if not result.parts:
+            raise Exception("Parts are missing")
+          if verbose_mode:
+            print(f"->{result.parts[0].function_response.response}")
+          
+          # After each function call append the types.Content to messages as well 
+          messages.append(types.Content(role="tool", parts=[types.Part(text=result.parts[0].function_response.response)]),)
+        
+        except Exception as e:
+          raise Exception(f"Error in function call: {e}")
+    
+    # Otherwise print LL'ms final response of the .text prerty and break 
+    else:
+      print(f"{response.text}")
+      return
+  
+    if "--verbose" in args:
+      print(f"Working on: {user_prompt}")
+      print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+      print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+
+    # print(f"{response.text}")
 
  
   return
